@@ -1,23 +1,24 @@
-//checks if the browser supports WebRTC 
 
-function hasUserMedia() { 
-   navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia 
-      || navigator.mozGetUserMedia || navigator.msGetUserMedia; 
-   return !!navigator.getUserMedia; 
-}
- 
-if (hasUserMedia()) { 
-   navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia
-      || navigator.mozGetUserMedia || navigator.msGetUserMedia;
-		
-   //get both video and audio streams from user's camera 
-   navigator.getUserMedia({ video: true, audio: true }, function (stream) { 
-      var video = document.querySelector('video'); 
-		
-      //insert stream into the video tag 
-      video.src = window.URL.createObjectURL(stream); 
-   }, function (err) {}); 
-	
-}else {
-   alert("Error. WebRTC is not supported!"); 
-}
+var app = require('express')();
+var http = require('http').Server(app);
+var io = require('socket.io')(http);
+var path= require('path');
+app.get('/', function(req, res) {
+res.sendFile('public/index.html', {root: __dirname});
+});
+
+//Whenever someone connects this gets executed
+io.on('connection', function(socket) {
+   console.log('Ninad is Online');
+  socket.on('drawing', (data) => socket.broadcast.emit('drawing', data));
+
+   //Whenever someone disconnects this piece of code executed
+   socket.on('disconnect', function () {
+      console.log('Ninad is Offline');
+   });
+});
+
+
+http.listen(3000,'0.0.0.0'|| 'localhost', function() {
+    console.log('Listening to port:  ' + 3000);
+});
