@@ -9,11 +9,9 @@
       "requires": {
         "mime-types": "2.1.18",
         "negotiator": "0.6.1",
-		`"express":"*",`
-
-`"body-parser":"*",`
-
-`"bcrypt": "^0.8.5"`
+		"express":"*",
+"body-parser":"*",
+"bcrypt": "^0.8.5"
       }
     },
     "after": {
