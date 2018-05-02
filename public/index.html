@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html>
    <head>
+
       <title>Hello world</title>
+<script src="https://www.gstatic.com/firebasejs/4.13.0/firebase.js"></script>
+
    <script src = "/socket.io/socket.io.js"></script>
    <style>
    html,body{
@@ -10,16 +13,86 @@
    }
    canvas{
    height:100%;
-   width:100%;
+width:100%;
    }
+   #localVid{
+    position:fixed;
+    border:2px solid #333;
+    top:5px; right:5px;
+    height:160px;
+   }
+    #remoteVid{
+    position:fixed;
+    border:2px solid #333;
+    bottom:5px; right:5px;
+    height:160px;
+   } 
    </style>
    </head>
    
-  <body>
+  <body onload="showMyFace()">
   <canvas class="whiteboard"></canvas>
-<script>
-'use strict';
+  <video id="localVid" autoplay playsinline>></video>
+  <video id="remoteVid" autoplay playsinline></video>
+   <button onclick="showFriendsFace()" type="button" class="btn btn-primary btn-lg"><span class="glyphicon glyphicon-facetime-video" aria-hidden="true"></span> Call</button>
 
+<script>
+
+'use strict';
+  var config = {
+    apiKey: "AIzaSyBLRhRZoMJLkSkjHC2vGzP3xBTGmqTIRf8",
+    authDomain: "videochat1-c7b99.firebaseapp.com",
+    databaseURL: "https://videochat1-c7b99.firebaseio.com",
+    projectId: "videochat1-c7b99",
+    storageBucket: "videochat1-c7b99.appspot.com",
+    messagingSenderId: "901460281516"
+  };
+  firebase.initializeApp(config);
+
+var database = firebase.database().ref();
+var yourVideo = document.getElementById("localVid");
+var friendsVideo = document.getElementById("remoteVid");
+var yourId = Math.floor(Math.random()*1000000000);
+var servers = {'iceServers': [{'urls': 'stun:stun.services.mozilla.com'}, {'urls': 'stun:stun.l.google.com:19302'}, {'urls': 'turn:numb.viagenie.ca','credential': 'webrtc','username': 'websitebeaver@mail.com'}]};
+var pc = new RTCPeerConnection(servers);
+pc.onicecandidate = (event => event.candidate?sendMessage(yourId, JSON.stringify({'ice': event.candidate})):console.log("Sent All Ice") );
+pc.onaddstream = (event => friendsVideo.srcObject = event.stream);
+
+function sendMessage(senderId, data) {
+ var msg = database.push({ sender: senderId, message: data });
+ msg.remove();
+}
+
+function readMessage(data) {
+ var msg = JSON.parse(data.val().message);
+ var sender = data.val().sender;
+ if (sender != yourId) {
+ if (msg.ice != undefined)
+ pc.addIceCandidate(new RTCIceCandidate(msg.ice));
+ else if (msg.sdp.type == "offer")
+ pc.setRemoteDescription(new RTCSessionDescription(msg.sdp))
+ .then(() => pc.createAnswer())
+ .then(answer => pc.setLocalDescription(answer))
+ .then(() => sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription})));
+ else if (msg.sdp.type == "answer")
+ pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+ }
+};
+
+database.on('child_added', readMessage);
+
+function showMyFace() {
+   navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => yourVideo.srcObject = stream)
+ .then(stream => pc.addStream(stream));
+
+ 
+}
+
+function showFriendsFace() {
+ pc.createOffer()
+ .then(offer => pc.setLocalDescription(offer) )
+ .then(() => sendMessage(yourId, JSON.stringify({'sdp': pc.localDescription})) );
+} 
 (function() {
 
   var socket = io();
@@ -45,6 +118,8 @@
 
   window.addEventListener('resize', onResize, false);
   onResize();
+
+
 
 
   function drawLine(x0, y0, x1, y1, color, emit){
